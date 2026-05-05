@@ -14,35 +14,48 @@ from audio_processor import AudioProcessor
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
-        description="Split audio files into segments",
+        description="Split audio files into segments of specified duration",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Examples:
+FEATURES:
+  - Supports MP3, WAV, M4A, and FLAC formats
+  - Wildcard support for batch processing
+  - If audio duration is less than 2x the split duration, the file is copied without splitting
+  - Automatic output folder creation with numbered segment naming
+  - Prefix format adapts to number of segments (01, 001, or 0001)
+
+EXAMPLES:
   # Split a single file into 5-minute segments
   %(prog)s song.mp3 --duration 5
   
-  # Split multiple files into 10-minute segments
+  # Split all MP3 files in current directory into 10-minute segments
   %(prog)s *.mp3 --duration 10
   
-  # Split to custom output folder
+  # Split files to custom output folder
   %(prog)s song.mp3 --duration 5 --output /path/to/output
+  
+  # Split files matching a pattern with quiet mode
+  %(prog)s /path/to/music/*.flac --duration 15 --quiet
+  
+  # Split all audio files in a directory
+  %(prog)s /path/to/audio/*.{mp3,wav,m4a,flac} --duration 3
         """
     )
     
     parser.add_argument(
         "files",
         nargs="+",
-        help="Audio file(s) to split (supports wildcards)"
+        help="Audio file(s) to split (supports wildcards like *.mp3)"
     )
     parser.add_argument(
         "--duration", "-d",
         type=int,
         default=5,
-        help="Split duration in minutes (default: 5)"
+        help="Split duration in minutes (default: 5, range: 1-120)"
     )
     parser.add_argument(
         "--output", "-o",
-        help="Custom output folder path (optional)"
+        help="Custom output folder path (optional, default: creates folder next to input file)"
     )
     parser.add_argument(
         "--quiet", "-q",
@@ -97,6 +110,7 @@ Examples:
     # Process files
     print(f"Processing {len(input_files)} file(s)...")
     print(f"Split duration: {args.duration} minutes")
+    print(f"Note: Files shorter than {args.duration * 2} minutes will be copied without splitting")
     print("-" * 50)
     
     if args.output:
@@ -139,10 +153,14 @@ Examples:
                 results['details'].append({'file': filepath, 'status': 'failed'})
         
         print("-" * 50)
-        print(f"Results: {results['successful']} successful, {results['failed']} failed")
+        print(f"Processing complete!")
+        print(f"Results: {results['successful']} successful, {results['failed']} failed out of {results['total']} file(s)")
         
         if results['failed'] > 0:
+            print(f"⚠ {results['failed']} file(s) failed to process")
             sys.exit(1)
+        else:
+            print("✓ All files processed successfully!")
 
 
 if __name__ == "__main__":
