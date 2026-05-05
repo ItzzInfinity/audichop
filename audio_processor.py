@@ -102,9 +102,9 @@ class AudioProcessor:
             duration_minutes = len(audio) / (1000 * 60)
             self.log_progress(f"Audio duration: {duration_minutes:.2f} minutes")
             
-            # If audio is shorter than split duration, just copy it
-            if duration_minutes <= split_duration_minutes:
-                self.log_progress("Audio is shorter than split duration. Copying original file...")
+            # If audio is shorter than 2x the split duration, just copy it
+            if duration_minutes <= split_duration_minutes * 2:
+                self.log_progress(f"Audio duration is less than {split_duration_minutes * 2} minutes. Copying original file...")
                 segment_number = 1
                 prefix_format = '02d'
                 original_name = input_path.name
