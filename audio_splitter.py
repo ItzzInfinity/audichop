@@ -8,6 +8,7 @@ import os
 import gc
 import threading
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
 
 # Set Qt platform to use offscreen rendering if needed
 if not os.environ.get('DISPLAY') and sys.platform.startswith('linux'):
@@ -17,7 +18,8 @@ try:
     from PyQt6.QtWidgets import (
         QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
         QPushButton, QLabel, QComboBox, QListWidget, QListWidgetItem,
-        QFileDialog, QProgressBar, QTextEdit, QSpinBox, QGroupBox, QLineEdit
+        QFileDialog, QProgressBar, QTextEdit, QSpinBox, QGroupBox, QLineEdit,
+        QCheckBox
     )
     from PyQt6.QtCore import Qt, pyqtSignal, QThread, QObject
     from PyQt6.QtGui import QFont, QColor
@@ -37,10 +39,12 @@ class WorkerThread(QThread):
     finished_signal = pyqtSignal(dict)
     progress_update_signal = pyqtSignal(int)  # New signal for progress bar
     
-    def __init__(self, files, duration):
+    def __init__(self, files, duration, use_multithreading=False, num_threads=1):
         super().__init__()
         self.files = files
         self.duration = duration
+        self.use_multithreading = use_multithreading
+        self.num_threads = num_threads
         self.processed_count = 0
         # Create a fresh processor whose callback emits the signal (thread-safe)
         self.processor = AudioProcessor(progress_callback=self._safe_log)
@@ -48,6 +52,11 @@ class WorkerThread(QThread):
     def _safe_log(self, message: str) -> None:
         """Emit signal instead of touching UI directly (thread-safe)."""
         self.progress_signal.emit(message)
+    
+    def _process_file(self, filepath):
+        """Process a single file."""
+        success = self.processor.split_audio_file(filepath, self.duration)
+        return filepath, success
     
     def run(self):
         """Run audio splitting in background thread."""
@@ -59,24 +68,51 @@ class WorkerThread(QThread):
                 'details': []
             }
             
-            for i, filepath in enumerate(self.files, 1):
-                self.progress_signal.emit(f"\n--- Processing file {i}/{len(self.files)} ---")
-                success = self.processor.split_audio_file(filepath, self.duration)
-                print("Finished processing file:", filepath, "Success:", success)  # Debug print
-                
-                if success:
-                    results['successful'] += 1
-                    results['details'].append({'file': filepath, 'status': 'success'})
-                else:
-                    results['failed'] += 1
-                    results['details'].append({'file': filepath, 'status': 'failed'})
-                
-                # Update progress bar
-                progress_percent = int((i / len(self.files)) * 100)
-                self.progress_update_signal.emit(progress_percent)
-                
-                # Force garbage collection to prevent memory issues
-                gc.collect()
+            if self.use_multithreading and self.num_threads > 1:
+                # Use thread pool for concurrent processing
+                with ThreadPoolExecutor(max_workers=self.num_threads) as executor:
+                    futures = []
+                    for i, filepath in enumerate(self.files, 1):
+                        self.progress_signal.emit(f"\n--- Queued for processing: {i}/{len(self.files)} ---")
+                        future = executor.submit(self._process_file, filepath)
+                        futures.append(future)
+                    
+                    # Process results as they complete
+                    for i, future in enumerate(futures, 1):
+                        filepath, success = future.result()
+                        
+                        if success:
+                            results['successful'] += 1
+                            results['details'].append({'file': filepath, 'status': 'success'})
+                        else:
+                            results['failed'] += 1
+                            results['details'].append({'file': filepath, 'status': 'failed'})
+                        
+                        # Update progress bar
+                        progress_percent = int((i / len(self.files)) * 100)
+                        self.progress_update_signal.emit(progress_percent)
+                        
+                        # Force garbage collection
+                        gc.collect()
+            else:
+                # Sequential processing
+                for i, filepath in enumerate(self.files, 1):
+                    self.progress_signal.emit(f"\n--- Processing file {i}/{len(self.files)} ---")
+                    success = self.processor.split_audio_file(filepath, self.duration)
+                    
+                    if success:
+                        results['successful'] += 1
+                        results['details'].append({'file': filepath, 'status': 'success'})
+                    else:
+                        results['failed'] += 1
+                        results['details'].append({'file': filepath, 'status': 'failed'})
+                    
+                    # Update progress bar
+                    progress_percent = int((i / len(self.files)) * 100)
+                    self.progress_update_signal.emit(progress_percent)
+                    
+                    # Force garbage collection to prevent memory issues
+                    gc.collect()
             
             self.finished_signal.emit(results)
         except Exception as e:
@@ -101,14 +137,31 @@ class AudioSplitterApp(QMainWindow):
     def init_ui(self):
         """Initialize the user interface."""
         self.setWindowTitle("Audio File Splitter")
-        self.setGeometry(100, 100, 900, 700)
+        self.setGeometry(100, 100, 1200, 800)
         
         # Create central widget and main layout
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
-        main_layout = QVBoxLayout(central_widget)
+        main_layout = QHBoxLayout(central_widget)
         main_layout.setSpacing(10)
         main_layout.setContentsMargins(15, 15, 15, 15)
+        
+        # LEFT SIDE: Log output
+        left_layout = QVBoxLayout()
+        log_group = QGroupBox("Log Output")
+        log_layout = QVBoxLayout()
+        
+        self.log_text = QTextEdit()
+        self.log_text.setReadOnly(True)
+        self.log_text.setMinimumWidth(300)
+        log_layout.addWidget(self.log_text)
+        
+        log_group.setLayout(log_layout)
+        left_layout.addWidget(log_group)
+        main_layout.addLayout(left_layout, 1)
+        
+        # RIGHT SIDE: Controls and settings
+        right_layout = QVBoxLayout()
         
         # Title
         title_label = QLabel("Audio File Splitter")
@@ -116,7 +169,7 @@ class AudioSplitterApp(QMainWindow):
         title_font.setPointSize(16)
         title_font.setBold(True)
         title_label.setFont(title_font)
-        main_layout.addWidget(title_label)
+        right_layout.addWidget(title_label)
         
         # Folder Selection Group
         folder_group = QGroupBox("Step 1: Select Folder & Audio Files")
@@ -141,8 +194,19 @@ class AudioSplitterApp(QMainWindow):
         folder_layout.addWidget(QLabel("Audio files in folder (select one or more):"))
         folder_layout.addWidget(self.file_list)
         
+        # Select All and Deselect All buttons
+        select_buttons_layout = QHBoxLayout()
+        self.select_all_btn = QPushButton("Select All")
+        self.select_all_btn.clicked.connect(self._select_all_files)
+        self.deselect_all_btn = QPushButton("Deselect All")
+        self.deselect_all_btn.clicked.connect(self._deselect_all_files)
+        select_buttons_layout.addWidget(self.select_all_btn)
+        select_buttons_layout.addWidget(self.deselect_all_btn)
+        select_buttons_layout.addStretch()
+        folder_layout.addLayout(select_buttons_layout)
+        
         folder_group.setLayout(folder_layout)
-        main_layout.addWidget(folder_group)
+        right_layout.addWidget(folder_group)
         
         # Settings Group
         settings_group = QGroupBox("Step 2: Configure Settings")
@@ -161,8 +225,27 @@ class AudioSplitterApp(QMainWindow):
         
         settings_layout.addWidget(QLabel("Supported formats: MP3, WAV, M4A, FLAC"))
         
+        # Multithreading settings
+        self.multithreading_checkbox = QCheckBox("Enable Multithreading")
+        self.multithreading_checkbox.setToolTip("Enable concurrent processing of multiple audio files using multiple threads")
+        self.multithreading_checkbox.toggled.connect(self._toggle_multithreading)
+        settings_layout.addWidget(self.multithreading_checkbox)
+        
+        # Thread count input
+        threads_layout = QHBoxLayout()
+        threads_layout.addWidget(QLabel("Number of Threads:"))
+        self.threads_spinbox = QSpinBox()
+        self.threads_spinbox.setMinimum(1)
+        self.threads_spinbox.setMaximum(self._get_max_threads())
+        self.threads_spinbox.setValue(2)
+        self.threads_spinbox.setEnabled(False)
+        self.threads_spinbox.setToolTip(f"Maximum threads: {self._get_max_threads()} (CPUs - 2)")
+        threads_layout.addWidget(self.threads_spinbox)
+        threads_layout.addStretch()
+        settings_layout.addLayout(threads_layout)
+        
         settings_group.setLayout(settings_layout)
-        main_layout.addWidget(settings_group)
+        right_layout.addWidget(settings_group)
         
         # Progress Group
         progress_group = QGroupBox("Step 3: Process & Results")
@@ -175,19 +258,7 @@ class AudioSplitterApp(QMainWindow):
         progress_layout.addWidget(self.progress_bar)
         
         progress_group.setLayout(progress_layout)
-        main_layout.addWidget(progress_group)
-        
-        # Log/Output Group
-        log_group = QGroupBox("Log Output")
-        log_layout = QVBoxLayout()
-        
-        self.log_text = QTextEdit()
-        self.log_text.setReadOnly(True)
-        self.log_text.setMaximumHeight(200)
-        log_layout.addWidget(self.log_text)
-        
-        log_group.setLayout(log_layout)
-        main_layout.addWidget(log_group)
+        right_layout.addWidget(progress_group)
         
         # Control buttons
         control_layout = QHBoxLayout()
@@ -203,10 +274,38 @@ class AudioSplitterApp(QMainWindow):
         
         control_layout.addWidget(self.start_btn)
         control_layout.addWidget(self.stop_btn)
-        main_layout.addLayout(control_layout)
+        right_layout.addLayout(control_layout)
         
         # Add stretch at the end
-        main_layout.addStretch()
+        right_layout.addStretch()
+        
+        main_layout.addLayout(right_layout, 1)
+    
+    def _get_max_threads(self):
+        """Get maximum number of threads (CPU count - 2)."""
+        import multiprocessing
+        cpu_count = multiprocessing.cpu_count()
+        max_threads = max(1, cpu_count - 2)
+        return max_threads
+    
+    def _toggle_multithreading(self, checked):
+        """Enable/disable thread count input based on checkbox."""
+        self.threads_spinbox.setEnabled(checked)
+        if checked:
+            self.update_log("✓ Multithreading enabled")
+        else:
+            self.update_log("✓ Multithreading disabled")
+    
+    def _select_all_files(self):
+        """Select all files in the file list."""
+        for i in range(self.file_list.count()):
+            self.file_list.item(i).setSelected(True)
+        self.update_log(f"✓ Selected {self.file_list.count()} file(s)")
+    
+    def _deselect_all_files(self):
+        """Deselect all files in the file list."""
+        self.file_list.clearSelection()
+        self.update_log("✓ Deselected all files")
     
     def _browse_folder(self):
         """Open folder dialog to select folder containing audio files."""
@@ -281,11 +380,17 @@ class AudioSplitterApp(QMainWindow):
         ]
         
         duration = self.duration_spinbox.value()
+        use_multithreading = self.multithreading_checkbox.isChecked()
+        num_threads = self.threads_spinbox.value() if use_multithreading else 1
         
         self.log_text.clear()
         self.update_log(f"Starting audio splitting process...")
         self.update_log(f"Files to process: {len(selected_files)}")
         self.update_log(f"Split duration: {duration} minutes")
+        if use_multithreading:
+            self.update_log(f"Multithreading: Enabled ({num_threads} threads)")
+        else:
+            self.update_log(f"Multithreading: Disabled (sequential processing)")
         self.update_log("-" * 50)
         
         # Disable buttons during processing
@@ -293,12 +398,14 @@ class AudioSplitterApp(QMainWindow):
         self.browse_folder_btn.setEnabled(False)
         self.folder_path_input.setEnabled(False)
         self.file_list.setEnabled(False)
+        self.multithreading_checkbox.setEnabled(False)
+        self.threads_spinbox.setEnabled(False)
         self.stop_btn.setEnabled(True)
         
-        # Create and start worker thread (thread creates its own processor)
-        self.worker_thread = WorkerThread(selected_files, duration)
+        # Create and start worker thread with multithreading settings
+        self.worker_thread = WorkerThread(selected_files, duration, use_multithreading, num_threads)
         self.worker_thread.progress_signal.connect(self.update_log)
-        self.worker_thread.progress_update_signal.connect(self.progress_bar.setValue)  # Connect progress bar
+        self.worker_thread.progress_update_signal.connect(self.progress_bar.setValue)
         self.worker_thread.finished_signal.connect(self.on_splitting_finished)
         self.worker_thread.start()
     
@@ -315,6 +422,9 @@ class AudioSplitterApp(QMainWindow):
         self.browse_folder_btn.setEnabled(True)
         self.folder_path_input.setEnabled(True)
         self.file_list.setEnabled(True)
+        self.multithreading_checkbox.setEnabled(True)
+        if self.multithreading_checkbox.isChecked():
+            self.threads_spinbox.setEnabled(True)
         self.stop_btn.setEnabled(False)
         
         # Ensure progress bar is at 100
@@ -336,6 +446,9 @@ class AudioSplitterApp(QMainWindow):
             self.browse_folder_btn.setEnabled(True)
             self.folder_path_input.setEnabled(True)
             self.file_list.setEnabled(True)
+            self.multithreading_checkbox.setEnabled(True)
+            if self.multithreading_checkbox.isChecked():
+                self.threads_spinbox.setEnabled(True)
             self.stop_btn.setEnabled(False)
 
 
