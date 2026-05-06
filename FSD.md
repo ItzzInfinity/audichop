@@ -16,19 +16,19 @@
 12. Read `ssd_2_system.py` for QT GUI reference and implement the following features:
     1. create a textbox to show the selected audio file path which is editable and can be used to input the path directly and to the right of it a button to open the file dialog to select **folder** called *Browse*
     2. A Container area which will show the list of present audio files in the selected folder with a selection feature to select one or more files to split which can be implemented from `ssd_2_system.py`.
- 13. Implement Lower Memory Usage:
+13. Implement Lower Memory Usage:
      1. Instead of loading the entire audio file into memory, the script will read and process the audio file in smaller chunks. This can be achieved by using a streaming approach or by utilizing libraries that support chunked processing of audio files.
      2. The script will also ensure that any temporary files created during the splitting process are properly managed and deleted after use to free up disk space.
      3. Additionally, the script will monitor memory usage during the splitting process and implement safeguards to prevent excessive memory consumption, such as limiting the number of concurrent processing threads or implementing a queue system for processing multiple files.
      4. Add one more button Select All and Deselect All to select or deselect all the audio files in the container area for splitting.
      5. Place the Log output All together to left side of the GUI 
      6. Make the Progress bar more Responsive as it currently does updated after the completion of each file, it should update after the completion of each segment to provide more real-time feedback to the user about the progress of the splitting process.
-  14. Implement Multithreading:
+14. Implement Multithreading:
       1. The script will utilize multithreading to allow for concurrent processing of multiple audio files. This can be achieved by creating a thread pool and assigning each audio file to a separate thread for processing.
       2. The script will also implement synchronization mechanisms to ensure that shared resources, such as the progress bar or log messages, are properly managed across multiple threads.
       3. The user will have the option to enable or disable multithreading based on their system capabilities and preferences, allowing for flexibility in how the script is executed.
       4. In GUI please add a checkbox to enable or disable multithreading and based on the selection add a textbox to input the number of threads to be used for processing. The script will validate the user input to ensure that it is a positive integer and will provide feedback if the input is invalid. and also add a tooltip to the checkbox and the textbox to explain their functionality to the user. and also add a validation to ensure that the number of threads specified does not exceed n-2 where n is the total number of CPU cores available on the user's system. This will help prevent overloading the system and ensure optimal performance during the splitting process.
-   15. CLI Support:
+15. CLI Support:
        1. In addition to the GUI, the script will also support command-line interface (CLI) for users who prefer to use the terminal. The CLI will allow users to specify the audio file(s) to be split, the split duration, and other relevant options through command-line arguments.
        2. The CLI will provide clear instructions and feedback to the user, similar to the GUI, and will also include error handling to manage potential issues that may arise during the splitting process.
        3. The CLI will be designed to be user-friendly and accessible, allowing users of all levels of technical expertise to utilize the audio file splitter effectively.
@@ -37,53 +37,3 @@
           2. where one can check if the duration of the audio file is less than the 2x of the split duration, then it will simply copy the original file to the new folder without splitting. This can be implemented in both the GUI and CLI versions of the script, allowing for consistent behavior regardless of how the user chooses to interact with the audio file splitter.
     
 # ISSUES
-1. For GUI the Task is not working 
-2. For CLI python3 launch.py --cli /home/itzzinfinity/Downloads/my_music/test.m4a -- duration 10
-   1. this should extract the base path and have done the task there
-   2. Error: Non-relative patterns are unsupported
-Traceback (most recent call last):
-  File "/home/itzzinfinity/Downloads/my_music/automation/split/launch.py", line 63, in <module>
-    main()
-  File "/home/itzzinfinity/Downloads/my_music/automation/split/launch.py", line 54, in main
-    cli_main()
-  File "/home/itzzinfinity/Downloads/my_music/automation/split/audio_splitter_cli.py", line 57, in main
-    matches = list(Path().glob(pattern))
-  File "/usr/lib/python3.10/pathlib.py", line 1032, in glob
-    raise NotImplementedError("Non-relative patterns are unsupported")
-NotImplementedError: Non-relative patterns are unsupported
-1. when I move the file to where the code is CLI worked this time
-   1.  python3 launch.py --cli test.m4a --duration 10
-Processing 1 file(s)...
-Split duration: 10 minutes
---------------------------------------------------
-
---- Processing file 1/1 ---
-Loading audio file: test.m4a
-Audio duration: 86.41 minutes
-Splitting into 9 segments...
-Processing segment 1/9...
-Saved: 01 - test.m4a
-Processing segment 2/9...
-Saved: 02 - test.m4a
-Processing segment 3/9...
-Saved: 03 - test.m4a
-Processing segment 4/9...
-Saved: 04 - test.m4a
-Processing segment 5/9...
-Saved: 05 - test.m4a
-Processing segment 6/9...
-Saved: 06 - test.m4a
-Processing segment 7/9...
-Saved: 07 - test.m4a
-Processing segment 8/9...
-Saved: 08 - test.m4a
-Processing segment 9/9...
-Saved: 09 - test.m4a
-✓ Successfully split test.m4a into 9 segments!
---------------------------------------------------
-Results: 1 successful, 0 failed
-
-4. same I have Done with GUI (split the local file - based on this current folder "test.m4a") -- is working partially 
-   1. Segmentation fault (core dumped)
-   2. out of 9 files it has done 8 files for 9th it got crashed
-5. Note while the GUI is working but the Progress bar is still at 0% - need to be fixed
