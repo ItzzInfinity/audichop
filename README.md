@@ -1,17 +1,19 @@
 # Audio File Splitter
 
-A PyQt6-based GUI application for splitting audio files into user-defined segments.
+A PyQt6-based GUI and CLI application for splitting audio files into user-defined segments.
 
 ## Features
 
 - **Multi-file Support**: Select and process multiple audio files at once
-- **Flexible Duration**: Choose split duration from 1-120 minutes via dropdown/spinbox
+- **Flexible Duration**: Choose split duration from 1-120 minutes via dropdown
 - **Format Support**: MP3, WAV, M4A, and FLAC audio formats
 - **Smart Naming**: Auto-calculates prefix padding (01, 001, 0001) based on segment count
 - **Error Handling**: Graceful error messages and continues processing on failures
 - **Progress Feedback**: Real-time log output showing processing status
-- **Short File Handling**: Automatically copies audio files shorter than split duration
+- **Short File Handling**: Automatically copies audio files shorter than or equal to 2x the split duration
 - **Background Processing**: Audio processing runs in separate thread to prevent UI freeze
+- **Lower Memory Usage**: Uses ffprobe/ffmpeg per segment instead of loading full files into Python memory
+- **CLI Support**: Batch processing, wildcard input, quiet mode, and optional worker threads
 
 ## Installation
 
@@ -107,15 +109,9 @@ The application handles various error scenarios:
 ## Dependencies
 
 - **PyQt6**: GUI framework
-- **pydub**: Audio processing library
-- **ffmpeg**: Audio codec support (system requirement)
+- **ffmpeg/ffprobe**: Audio codec and duration support (system requirement)
 
 ## Troubleshooting
-
-### "No module named 'pydub'"
-```bash
-pip install pydub
-```
 
 ### ffmpeg not found
 Make sure ffmpeg is installed and in your system PATH.
