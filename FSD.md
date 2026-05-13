@@ -35,5 +35,8 @@
        4. add a wildcard 
           1. where users can specify a pattern to match multiple audio files in the CLI. For example, users can use a pattern like `*.mp3` to select all MP3 files in a directory for splitting. The script will then process all files that match the specified pattern, providing feedback on the progress and results of the splitting process for each file.
           2. where one can check if the duration of the audio file is less than the 2x of the split duration, then it will simply copy the original file to the new folder without splitting. This can be implemented in both the GUI and CLI versions of the script, allowing for consistent behavior regardless of how the user chooses to interact with the audio file splitter.
+16. Make a README_CLI.md file to explain how to use the CLI version of the script, including examples of command-line arguments and usage scenarios.
+17. Make a README_GUI.md file to explain how to use the GUI version of the script, including step-by-step instructions and screenshots of the interface.
     
 # ISSUES
+1. Enabling Multithreading is causing the GUI to crash - Need to implement proper thread management and synchronization to prevent crashes when multithreading is enabled. 
