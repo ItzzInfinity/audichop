@@ -1,6 +1,6 @@
 """
 Audio File Splitter GUI Application
-Uses PyQt6 for the user interface and pydub for audio processing.
+Uses PyQt6 for the user interface and ffmpeg for audio processing.
 """
 
 import sys
@@ -8,7 +8,7 @@ import os
 import gc
 import threading
 from pathlib import Path
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Set Qt platform to use offscreen rendering if needed
 if not os.environ.get('DISPLAY') and sys.platform.startswith('linux'):
@@ -18,11 +18,11 @@ try:
     from PyQt6.QtWidgets import (
         QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
         QPushButton, QLabel, QComboBox, QListWidget, QListWidgetItem,
-        QFileDialog, QProgressBar, QTextEdit, QSpinBox, QGroupBox, QLineEdit,
+        QFileDialog, QProgressBar, QTextEdit, QGroupBox, QLineEdit,
         QCheckBox
     )
-    from PyQt6.QtCore import Qt, pyqtSignal, QThread, QObject
-    from PyQt6.QtGui import QFont, QColor
+    from PyQt6.QtCore import Qt, pyqtSignal, QThread
+    from PyQt6.QtGui import QFont, QIntValidator
 except ImportError as e:
     print(f"Error importing PyQt6: {e}")
     print("Try: pip install --upgrade PyQt6")
@@ -45,22 +45,71 @@ class WorkerThread(QThread):
         self.duration = duration
         self.use_multithreading = use_multithreading
         self.num_threads = num_threads
-        self.processed_count = 0
-        # Create a fresh processor whose callback emits the signal (thread-safe)
-        self.processor = AudioProcessor(progress_callback=self._safe_log)
+        self.cancel_event = threading.Event()
+        self.completed_units = 0
+        self.total_units = 0
+        self.progress_lock = threading.Lock()
     
     def _safe_log(self, message: str) -> None:
         """Emit signal instead of touching UI directly (thread-safe)."""
         self.progress_signal.emit(message)
+
+    def cancel(self):
+        """Request processing cancellation."""
+        self.cancel_event.set()
+
+    def _is_cancelled(self):
+        """Return True when cancellation has been requested."""
+        return self.cancel_event.is_set()
+
+    def _segment_done(self, filepath, segment_number, total_segments):
+        """Update aggregate progress after each copied/split unit."""
+        with self.progress_lock:
+            self.completed_units += 1
+            if self.total_units:
+                progress_percent = int((self.completed_units / self.total_units) * 100)
+            else:
+                progress_percent = 0
+        self.progress_update_signal.emit(min(100, progress_percent))
     
     def _process_file(self, filepath):
         """Process a single file."""
-        success = self.processor.split_audio_file(filepath, self.duration)
+        processor = AudioProcessor(
+            progress_callback=self._safe_log,
+            segment_callback=self._segment_done,
+            cancel_callback=self._is_cancelled,
+        )
+        success = processor.split_audio_file(filepath, self.duration)
         return filepath, success
+
+    def _plan_progress_units(self):
+        """Estimate total segment-level work before processing starts."""
+        self.progress_signal.emit("Calculating segment-level progress...")
+        planner = AudioProcessor(progress_callback=self._safe_log)
+        total_units = 0
+        for filepath in self.files:
+            if self._is_cancelled():
+                break
+            try:
+                total_units += planner.planned_segment_count(filepath, self.duration)
+            except Exception as exc:
+                self.progress_signal.emit(f"Warning: Could not inspect {Path(filepath).name}: {exc}")
+                total_units += 1
+        self.total_units = max(1, total_units)
     
     def run(self):
         """Run audio splitting in background thread."""
         try:
+            self._plan_progress_units()
+            if self._is_cancelled():
+                self.finished_signal.emit({
+                    'total': len(self.files),
+                    'successful': 0,
+                    'failed': len(self.files),
+                    'details': []
+                })
+                return
+
             results = {
                 'total': len(self.files),
                 'successful': 0,
@@ -73,12 +122,16 @@ class WorkerThread(QThread):
                 with ThreadPoolExecutor(max_workers=self.num_threads) as executor:
                     futures = []
                     for i, filepath in enumerate(self.files, 1):
+                        if self._is_cancelled():
+                            break
                         self.progress_signal.emit(f"\n--- Queued for processing: {i}/{len(self.files)} ---")
                         future = executor.submit(self._process_file, filepath)
                         futures.append(future)
                     
                     # Process results as they complete
-                    for i, future in enumerate(futures, 1):
+                    for future in as_completed(futures):
+                        if self._is_cancelled():
+                            break
                         filepath, success = future.result()
                         
                         if success:
@@ -87,18 +140,16 @@ class WorkerThread(QThread):
                         else:
                             results['failed'] += 1
                             results['details'].append({'file': filepath, 'status': 'failed'})
-                        
-                        # Update progress bar
-                        progress_percent = int((i / len(self.files)) * 100)
-                        self.progress_update_signal.emit(progress_percent)
-                        
+
                         # Force garbage collection
                         gc.collect()
             else:
                 # Sequential processing
                 for i, filepath in enumerate(self.files, 1):
+                    if self._is_cancelled():
+                        break
                     self.progress_signal.emit(f"\n--- Processing file {i}/{len(self.files)} ---")
-                    success = self.processor.split_audio_file(filepath, self.duration)
+                    success = self._process_file(filepath)[1]
                     
                     if success:
                         results['successful'] += 1
@@ -106,11 +157,7 @@ class WorkerThread(QThread):
                     else:
                         results['failed'] += 1
                         results['details'].append({'file': filepath, 'status': 'failed'})
-                    
-                    # Update progress bar
-                    progress_percent = int((i / len(self.files)) * 100)
-                    self.progress_update_signal.emit(progress_percent)
-                    
+
                     # Force garbage collection to prevent memory issues
                     gc.collect()
             
@@ -213,14 +260,14 @@ class AudioSplitterApp(QMainWindow):
         settings_group = QGroupBox("Step 2: Configure Settings")
         settings_layout = QVBoxLayout()
         
-        # Duration selector with spinbox
+        # Duration selector with dropdown
         duration_layout = QHBoxLayout()
         duration_layout.addWidget(QLabel("Split Duration (minutes):"))
-        self.duration_spinbox = QSpinBox()
-        self.duration_spinbox.setMinimum(1)
-        self.duration_spinbox.setMaximum(120)
-        self.duration_spinbox.setValue(20)
-        duration_layout.addWidget(self.duration_spinbox)
+        self.duration_combo = QComboBox()
+        for minutes in [1, 2, 3, 5, 10, 15, 20, 30, 45, 60, 90, 120]:
+            self.duration_combo.addItem(f"{minutes} minutes", minutes)
+        self.duration_combo.setCurrentIndex(self.duration_combo.findData(20))
+        duration_layout.addWidget(self.duration_combo)
         duration_layout.addStretch()
         settings_layout.addLayout(duration_layout)
         
@@ -235,13 +282,16 @@ class AudioSplitterApp(QMainWindow):
         # Thread count input
         threads_layout = QHBoxLayout()
         threads_layout.addWidget(QLabel("Number of Threads:"))
-        self.threads_spinbox = QSpinBox()
-        self.threads_spinbox.setMinimum(1)
-        self.threads_spinbox.setMaximum(self._get_max_threads())
-        self.threads_spinbox.setValue(2)
-        self.threads_spinbox.setEnabled(False)
-        self.threads_spinbox.setToolTip(f"Maximum threads: {self._get_max_threads()} (CPUs - 2)")
-        threads_layout.addWidget(self.threads_spinbox)
+        self.threads_input = QLineEdit()
+        self.threads_input.setValidator(QIntValidator(1, self._get_max_threads(), self))
+        self.threads_input.setText(str(min(2, self._get_max_threads())))
+        self.threads_input.setEnabled(False)
+        self.threads_input.setMaximumWidth(90)
+        self.threads_input.setToolTip(
+            f"Enter a positive integer up to {self._get_max_threads()} (CPU cores - 2) "
+            "to limit concurrent audio file processing."
+        )
+        threads_layout.addWidget(self.threads_input)
         threads_layout.addStretch()
         settings_layout.addLayout(threads_layout)
         
@@ -291,7 +341,7 @@ class AudioSplitterApp(QMainWindow):
     
     def _toggle_multithreading(self, checked):
         """Enable/disable thread count input based on checkbox."""
-        self.threads_spinbox.setEnabled(checked)
+        self.threads_input.setEnabled(checked)
         if checked:
             self.update_log("✓ Multithreading enabled")
         else:
@@ -380,9 +430,20 @@ class AudioSplitterApp(QMainWindow):
             for item in selected_items
         ]
         
-        duration = self.duration_spinbox.value()
+        duration = self.duration_combo.currentData()
         use_multithreading = self.multithreading_checkbox.isChecked()
-        num_threads = self.threads_spinbox.value() if use_multithreading else 1
+        num_threads = 1
+        if use_multithreading:
+            try:
+                num_threads = int(self.threads_input.text().strip())
+            except ValueError:
+                self.update_log("❌ Error: Number of threads must be a positive integer.")
+                return
+
+            max_threads = self._get_max_threads()
+            if num_threads < 1 or num_threads > max_threads:
+                self.update_log(f"❌ Error: Number of threads must be between 1 and {max_threads}.")
+                return
         
         self.log_text.clear()
         self.update_log(f"Starting audio splitting process...")
@@ -400,7 +461,7 @@ class AudioSplitterApp(QMainWindow):
         self.folder_path_input.setEnabled(False)
         self.file_list.setEnabled(False)
         self.multithreading_checkbox.setEnabled(False)
-        self.threads_spinbox.setEnabled(False)
+        self.threads_input.setEnabled(False)
         self.stop_btn.setEnabled(True)
         
         # Create and start worker thread with multithreading settings
@@ -425,7 +486,7 @@ class AudioSplitterApp(QMainWindow):
         self.file_list.setEnabled(True)
         self.multithreading_checkbox.setEnabled(True)
         if self.multithreading_checkbox.isChecked():
-            self.threads_spinbox.setEnabled(True)
+            self.threads_input.setEnabled(True)
         self.stop_btn.setEnabled(False)
         
         # Ensure progress bar is at 100
@@ -438,18 +499,8 @@ class AudioSplitterApp(QMainWindow):
     def stop_splitting(self):
         """Stop the splitting process."""
         if self.worker_thread and self.worker_thread.isRunning():
-            self.worker_thread.quit()
-            self.worker_thread.wait()
-            self.update_log("⚠ Splitting process stopped by user.")
-            
-            # Re-enable buttons
-            self.start_btn.setEnabled(True)
-            self.browse_folder_btn.setEnabled(True)
-            self.folder_path_input.setEnabled(True)
-            self.file_list.setEnabled(True)
-            self.multithreading_checkbox.setEnabled(True)
-            if self.multithreading_checkbox.isChecked():
-                self.threads_spinbox.setEnabled(True)
+            self.worker_thread.cancel()
+            self.update_log("⚠ Stop requested. Current segment will finish before the worker exits.")
             self.stop_btn.setEnabled(False)
 
 
