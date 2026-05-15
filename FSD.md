@@ -35,8 +35,13 @@
        4. add a wildcard 
           1. where users can specify a pattern to match multiple audio files in the CLI. For example, users can use a pattern like `*.mp3` to select all MP3 files in a directory for splitting. The script will then process all files that match the specified pattern, providing feedback on the progress and results of the splitting process for each file.
           2. where one can check if the duration of the audio file is less than the 2x of the split duration, then it will simply copy the original file to the new folder without splitting. This can be implemented in both the GUI and CLI versions of the script, allowing for consistent behavior regardless of how the user chooses to interact with the audio file splitter.
-16. Make a README_CLI.md file to explain how to use the CLI version of the script, including examples of command-line arguments and usage scenarios.
-17. Make a README_GUI.md file to explain how to use the GUI version of the script, including step-by-step instructions and screenshots of the interface.
-    
+16. GUI Redesign:
+    1. Place Log Output to the left side of the GUI and make it resizable with dragging the divider between the log output and the file selection area. 
+    2. Make the Selection area resizeable too.
+17. Make a README_CLI.md file to explain how to use the CLI version of the script, including examples of command-line arguments and usage scenarios.
+18. Make a README_GUI.md file to explain how to use the GUI version of the script, including step-by-step instructions and screenshots of the interface.
+19. write a file audio_merge_cli.py to merge audio files from the command line, similar to the splitting functionality but in reverse, allowing users to combine multiple audio segments back into a single file.
+    1.  It will combine multiple audio segments with the arguments provided by the user, such as the input files, output file name
+    2.  merge_cli.py 1.m4a 2.m4a 3.m4a -o merged_song.m4a merge will be done in the order of the input files provided by the user and if no output file name is provided, it will default to the name of the first input file with a suffix "_merged" (e.g., "1_merged.m4a").
 # ISSUES
 1. Enabling Multithreading is causing the GUI to crash - Need to implement proper thread management and synchronization to prevent crashes when multithreading is enabled. 

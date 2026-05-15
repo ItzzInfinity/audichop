@@ -19,7 +19,7 @@ try:
         QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
         QPushButton, QLabel, QComboBox, QListWidget, QListWidgetItem,
         QFileDialog, QProgressBar, QTextEdit, QGroupBox, QLineEdit,
-        QCheckBox
+        QCheckBox, QSplitter, QSizePolicy
     )
     from PyQt6.QtCore import Qt, pyqtSignal, QThread
     from PyQt6.QtGui import QFont, QIntValidator
@@ -192,23 +192,28 @@ class AudioSplitterApp(QMainWindow):
         main_layout = QHBoxLayout(central_widget)
         main_layout.setSpacing(10)
         main_layout.setContentsMargins(15, 15, 15, 15)
+
+        main_splitter = QSplitter(Qt.Orientation.Horizontal)
+        main_splitter.setChildrenCollapsible(False)
+        main_layout.addWidget(main_splitter)
         
         # LEFT SIDE: Log output
-        left_layout = QVBoxLayout()
         log_group = QGroupBox("Log Output")
         log_layout = QVBoxLayout()
         
         self.log_text = QTextEdit()
         self.log_text.setReadOnly(True)
         self.log_text.setMinimumWidth(300)
+        self.log_text.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         log_layout.addWidget(self.log_text)
         
         log_group.setLayout(log_layout)
-        left_layout.addWidget(log_group)
-        main_layout.addLayout(left_layout, 1)
+        main_splitter.addWidget(log_group)
         
         # RIGHT SIDE: Controls and settings
-        right_layout = QVBoxLayout()
+        right_panel = QWidget()
+        right_layout = QVBoxLayout(right_panel)
+        right_layout.setContentsMargins(0, 0, 0, 0)
         
         # Title
         title_label = QLabel("Audio File Splitter")
@@ -238,7 +243,8 @@ class AudioSplitterApp(QMainWindow):
         # File list with multi-select
         self.file_list = QListWidget()
         self.file_list.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
-        self.file_list.setMaximumHeight(150)
+        self.file_list.setMinimumHeight(180)
+        self.file_list.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         folder_layout.addWidget(QLabel("Audio files in folder (select one or more):"))
         folder_layout.addWidget(self.file_list)
         
@@ -254,7 +260,11 @@ class AudioSplitterApp(QMainWindow):
         folder_layout.addLayout(select_buttons_layout)
         
         folder_group.setLayout(folder_layout)
-        right_layout.addWidget(folder_group)
+        folder_group.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+
+        controls_panel = QWidget()
+        controls_layout = QVBoxLayout(controls_panel)
+        controls_layout.setContentsMargins(0, 0, 0, 0)
         
         # Settings Group
         settings_group = QGroupBox("Step 2: Configure Settings")
@@ -296,7 +306,7 @@ class AudioSplitterApp(QMainWindow):
         settings_layout.addLayout(threads_layout)
         
         settings_group.setLayout(settings_layout)
-        right_layout.addWidget(settings_group)
+        controls_layout.addWidget(settings_group)
         
         # Progress Group
         progress_group = QGroupBox("Step 3: Process & Results")
@@ -309,7 +319,7 @@ class AudioSplitterApp(QMainWindow):
         progress_layout.addWidget(self.progress_bar)
         
         progress_group.setLayout(progress_layout)
-        right_layout.addWidget(progress_group)
+        controls_layout.addWidget(progress_group)
         
         # Control buttons
         control_layout = QHBoxLayout()
@@ -325,12 +335,24 @@ class AudioSplitterApp(QMainWindow):
         
         control_layout.addWidget(self.start_btn)
         control_layout.addWidget(self.stop_btn)
-        right_layout.addLayout(control_layout)
+        controls_layout.addLayout(control_layout)
         
         # Add stretch at the end
-        right_layout.addStretch()
+        controls_layout.addStretch()
+
+        selection_splitter = QSplitter(Qt.Orientation.Vertical)
+        selection_splitter.setChildrenCollapsible(False)
+        selection_splitter.addWidget(folder_group)
+        selection_splitter.addWidget(controls_panel)
+        selection_splitter.setStretchFactor(0, 2)
+        selection_splitter.setStretchFactor(1, 1)
+        selection_splitter.setSizes([420, 320])
+        right_layout.addWidget(selection_splitter)
         
-        main_layout.addLayout(right_layout, 1)
+        main_splitter.addWidget(right_panel)
+        main_splitter.setStretchFactor(0, 1)
+        main_splitter.setStretchFactor(1, 2)
+        main_splitter.setSizes([420, 760])
     
     def _get_max_threads(self):
         """Get maximum number of threads (CPU count - 2)."""

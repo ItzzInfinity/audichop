@@ -6,6 +6,12 @@ Run the PyQt6 interface when you want to select files visually and monitor progr
 python3 audio_splitter.py
 ```
 
+## Screenshot
+
+![Audio Splitter GUI](docs/gui_screenshot.png)
+
+The log panel is on the left. Drag the vertical divider to resize it against the file selection and controls. Drag the horizontal divider in the right panel to resize the audio file selection area.
+
 ## Workflow
 
 1. Choose an audio folder.
