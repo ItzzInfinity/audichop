@@ -53,21 +53,22 @@ def merge_audio_files(input_files, output_file):
         concat_file.flush()
 
         command = [
-            "ffmpeg",
-            "-y",
-            "-hide_banner",
-            "-loglevel",
-            "error",
-            "-f",
-            "concat",
-            "-safe",
-            "0",
-            "-i",
-            concat_file.name,
-            "-c",
-            "copy",
-            str(output_path),
-        ]
+                "ffmpeg",
+                "-y", 
+                "-hide_banner", 
+                "-loglevel", "error", 
+                "-f", 
+                "concat", 
+                "-safe", 
+                "0", 
+                "-i", 
+                concat_file.name,
+                "-map",
+                "0:a",          # ← audio streams only, drop mjpeg thumbnail
+                "-c", 
+                "copy",
+                str(output_path),
+                ]
         subprocess.run(command, check=True, capture_output=True, text=True)
 
     return output_path
