@@ -40,52 +40,55 @@ A PyQt6-based GUI and CLI application for splitting audio files into user-define
    pip install -r requirements.txt
    ```
 
-## Usage
+## Modes
 
-### Running the Application
+### GUI — Visual Interface
+
+A PyQt6 desktop application for selecting files, configuring settings, and watching live progress.
 
 ```bash
-python audio_splitter.py
+python3 audio_splitter.py
 ```
 
-### Steps to Split Audio Files
+![Audio Splitter GUI](docs/gui_screenshot.png)
 
-1. **Step 1: Select Audio Files**
-   - Click "Add Audio Files" to select one or more audio files
-   - Supported formats: MP3, WAV, M4A, FLAC
-   - Click "Clear Selection" to remove all selected files
+The log panel sits on the left. Drag the vertical divider to resize it. Drag the horizontal divider in the right panel to resize the file browser area independently.
 
-2. **Step 2: Configure Settings**
-   - Set the split duration in minutes (1-120 minutes)
-   - Default is 5 minutes
+→ Full GUI guide: [README_GUI.md](README_GUI.md)
 
-3. **Step 3: Process & Results**
-   - Click "Start Splitting" to begin processing
-   - Monitor progress in the log output window
-   - Processing runs in the background to keep the UI responsive
+---
+
+### CLI — Terminal & Batch Processing
+
+A command-line interface for scripting, wildcards, and automated pipelines. Also includes a merge tool to combine segments back into one file.
+
+```bash
+# Split a single file
+python3 audio_splitter_cli.py song.mp3 --duration 20
+
+# Split all m4a files with 4 parallel threads
+python3 audio_splitter_cli.py "*.m4a" --duration 20 --threads 4
+
+# Merge segments back together
+python3 audio_merge_cli.py 01.m4a 02.m4a 03.m4a -o merged.m4a
+```
+
+→ Full CLI guide: [README_CLI.md](README_CLI.md)
+
+---
 
 ### Output
 
-For each audio file processed:
-- A new folder is created with the same name as the audio file
-- Split segments are saved as: `01 - filename.mp3`, `02 - filename.mp3`, etc.
-- Numbering prefix adjusts based on total segments:
-  - `< 100 segments`: 01, 02, ..., 99
-  - `100-999 segments`: 001, 002, ..., 999
-  - `≥ 1000 segments`: 0001, 0002, ...., 9999
+Each input file creates a folder beside the source with numbered segments:
 
-### Example
-
-**Input**: `song.mp3` (15 minutes)
-**Split Duration**: 5 minutes
-**Output Folder**: `song/`
-**Output Files**:
 ```
 song/
 ├── 01 - song.mp3   (0:00 - 5:00)
 ├── 02 - song.mp3   (5:00 - 10:00)
 └── 03 - song.mp3   (10:00 - 15:00)
 ```
+
+Files shorter than or equal to twice the split duration are copied as `01 - original-name.ext` without splitting.
 
 ## File Structure
 
@@ -127,5 +130,4 @@ Ensure your audio file is in one of the supported formats: MP3, WAV, M4A, or FLA
 - Progress is logged in real-time
 
 ## License
-
-This project is created as per the specifications in FSD.md
+This project is licensed under the [MIT License](https://opensource.org/licenses/MIT). See the LICENSE file for details.
