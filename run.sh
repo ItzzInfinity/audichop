@@ -45,7 +45,7 @@ echo "  Starting Audio File Splitter..."
 echo "=========================================="
 echo ""
 
-python3 launch.py "$@"
+python3 -m audiochop.launch "$@"
 exit_code=$?
 
 exit $exit_code
