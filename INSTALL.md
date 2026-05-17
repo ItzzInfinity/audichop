@@ -1,7 +1,7 @@
-# Audio File Splitter - Installation & Quick Start Guide
+# AudioChop - Installation & Quick Start Guide
 
 ## Overview
-Audio File Splitter is a Python application with both GUI and CLI interfaces for splitting audio files into user-defined segments. It supports MP3, WAV, M4A, and FLAC formats.
+AudioChop is a Python package with both GUI and CLI interfaces for splitting audio files into user-defined segments. It supports MP3, WAV, M4A, and FLAC formats on Windows, macOS, and Linux when ffmpeg/ffprobe are available in `PATH`.
 
 ## Quick Start (Recommended)
 
@@ -12,8 +12,9 @@ chmod +x run.sh
 ```
 
 ### Windows
-```bash
-run.bat
+```powershell
+py -m pip install .
+py -m audiochop.launch
 ```
 
 ## Manual Installation
@@ -47,11 +48,16 @@ run.bat
 pip install -r requirements.txt
 ```
 
+### Install The Package
+```bash
+python3 -m pip install .
+```
+
 ## Usage
 
 ### GUI Application (Recommended for Users)
 ```bash
-python3 audio_splitter.py
+python3 -m audiochop.launch
 ```
 
 **How to use:**
@@ -62,34 +68,38 @@ python3 audio_splitter.py
 
 ### Command-Line Interface (For Automation)
 ```bash
-python3 audio_splitter_cli.py [options] FILES
+python3 -m audiochop [options] FILES
 ```
 
 **Examples:**
 ```bash
 # Split single file into 5-minute segments
-python3 audio_splitter_cli.py song.mp3 --duration 5
+python3 -m audiochop song.mp3 --duration 5
 
 # Split all MP3 files into 10-minute segments
-python3 audio_splitter_cli.py "*.mp3" --duration 10
+python3 -m audiochop "*.mp3" --duration 10
 
 # Split to custom output folder
-python3 audio_splitter_cli.py song.mp3 --duration 5 --output ./output
+python3 -m audiochop song.mp3 --duration 5 --output ./output
 
 # Quiet mode (suppress output)
-python3 audio_splitter_cli.py song.mp3 --duration 5 --quiet
+python3 -m audiochop song.mp3 --duration 5 --quiet
 ```
 
 ## File Structure
 
 ```
 /split/
-├── audio_splitter.py          # Main GUI application
-├── audio_splitter_cli.py      # Command-line interface
-├── audio_processor.py         # Core audio processing logic
+├── audiochop/                 # Python package
+│   ├── __main__.py            # python3 -m audiochop
+│   ├── launch.py              # python3 -m audiochop.launch
+│   ├── cli.py                 # Split command-line interface
+│   ├── gui.py                 # PyQt6 GUI application
+│   ├── merge_cli.py           # Merge command-line interface
+│   └── processor.py           # Core audio processing logic
+├── pyproject.toml             # Package metadata
 ├── requirements.txt           # Python dependencies
 ├── run.sh                      # Linux/macOS quick start
-├── run.bat                     # Windows quick start
 ├── README.md                   # Usage documentation
 ├── INSTALL.md                  # This file
 └── FSD.md                      # Original specification
@@ -130,19 +140,14 @@ song/
 pip install --upgrade PyQt6
 ```
 
-### "No module named 'pydub'"
-```bash
-pip install --upgrade pydub
-```
-
 ### "ffmpeg not found"
 - Ensure ffmpeg is installed: `ffmpeg -version`
 - On Windows, add ffmpeg to system PATH
 - On macOS/Linux, verify installation: `which ffmpeg`
 
 ### GUI window doesn't appear
-- Ensure you're running X11 on Linux (remote systems may need special setup)
-- Try CLI version instead: `python3 audio_splitter_cli.py`
+- Ensure your desktop/display server is available, especially on remote Linux systems
+- Try CLI version instead: `python3 -m audiochop`
 
 ### Audio file processing is slow
 - This is normal for large files
@@ -192,7 +197,7 @@ chmod +x run.sh
 
 ### Python API (For Developers)
 ```python
-from audio_processor import AudioProcessor
+from audiochop import AudioProcessor
 
 def progress_callback(msg):
     print(msg)
