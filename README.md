@@ -1,4 +1,4 @@
-# Audio File Splitter
+# AudioChop
 
 A PyQt6-based GUI and CLI application for splitting audio files into user-defined segments.
 
@@ -19,7 +19,7 @@ A PyQt6-based GUI and CLI application for splitting audio files into user-define
 
 ### Requirements
 - Python 3.8+
-- ffmpeg (required by pydub for audio processing)
+- ffmpeg and ffprobe available in `PATH`
 
 ### Setup
 
@@ -40,6 +40,11 @@ A PyQt6-based GUI and CLI application for splitting audio files into user-define
    pip install -r requirements.txt
    ```
 
+3. Optional: install as a package for use from other projects:
+   ```bash
+   python3 -m pip install .
+   ```
+
 ## Modes
 
 ### GUI — Visual Interface
@@ -47,7 +52,7 @@ A PyQt6-based GUI and CLI application for splitting audio files into user-define
 A PyQt6 desktop application for selecting files, configuring settings, and watching live progress.
 
 ```bash
-python3 audio_splitter.py
+python3 -m audiochop.launch
 ```
 
 ![Audio Splitter GUI](docs/gui_screenshot.png)
@@ -64,13 +69,13 @@ A command-line interface for scripting, wildcards, and automated pipelines. Also
 
 ```bash
 # Split a single file
-python3 audio_splitter_cli.py song.mp3 --duration 20
+python3 -m audiochop song.mp3 --duration 20
 
 # Split all m4a files with 4 parallel threads
-python3 audio_splitter_cli.py "*.m4a" --duration 20 --threads 4
+python3 -m audiochop "*.m4a" --duration 20 --threads 4
 
 # Merge segments back together
-python3 audio_merge_cli.py 01.m4a 02.m4a 03.m4a -o merged.m4a
+python3 -m audiochop.merge_cli 01.m4a 02.m4a 03.m4a -o merged.m4a
 ```
 
 → Full CLI guide: [README_CLI.md](README_CLI.md)
@@ -94,12 +99,55 @@ Files shorter than or equal to twice the split duration are copied as `01 - orig
 
 ```
 /split/
-├── audio_splitter.py      # Main GUI application
-├── audio_processor.py     # Audio processing logic
+├── audiochop/              # Installable package entry points
+│   ├── __main__.py         # python3 -m audiochop
+│   ├── launch.py           # python3 -m audiochop.launch
+│   ├── cli.py              # Splitter CLI module
+│   ├── gui.py              # GUI module
+│   ├── merge_cli.py        # Merge CLI module
+│   └── processor.py        # Core audio processing logic
+├── pyproject.toml         # Package metadata
 ├── requirements.txt       # Python dependencies
 ├── README.md             # This file
 └── FSD.md                # Functionality Specification Document
 ```
+
+## Python API
+
+After installing the package, import the splitter in another project:
+
+```python
+from audiochop import AudioProcessor, split_audio_file, split_multiple_files
+
+split_audio_file("/home/me/Downloads/song.m4a", 20)
+```
+
+For progress logs:
+
+```python
+from audiochop import AudioProcessor
+
+processor = AudioProcessor(progress_callback=print)
+processor.split_audio_file("/path/to/song.mp3", 10)
+```
+
+For merging:
+
+```python
+from audiochop import merge_audio_files
+
+merge_audio_files(["01.m4a", "02.m4a", "03.m4a"], "merged_song.m4a")
+```
+
+Core API reference:
+
+- `AudioProcessor(progress_callback=None, segment_callback=None, cancel_callback=None)`
+- `AudioProcessor.split_audio_file(input_filepath, split_duration_minutes, output_folder=None) -> bool`
+- `AudioProcessor.split_multiple_files(input_filepaths, split_duration_minutes) -> dict`
+- `AudioProcessor.planned_segment_count(input_filepath, split_duration_minutes) -> int`
+- `split_audio_file(input_filepath, split_duration_minutes, output_folder=None, progress_callback=None) -> bool`
+- `split_multiple_files(input_filepaths, split_duration_minutes, progress_callback=None) -> dict`
+- `merge_audio_files(input_files, output_file) -> pathlib.Path`
 
 ## Error Handling
 
