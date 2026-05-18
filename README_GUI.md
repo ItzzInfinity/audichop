@@ -3,7 +3,7 @@
 Run the PyQt6 interface when you want to select files visually and monitor progress.
 
 ```bash
-python3 audio_splitter.py
+python3 -m audiochop.launch
 ```
 
 ## Screenshot
