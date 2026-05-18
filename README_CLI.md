@@ -1,7 +1,7 @@
 # Audio Splitter CLI
 
-Use `audio_splitter_cli.py` when you want to split files from a terminal or batch script.
-Use `audio_merge_cli.py` when you want to combine split segments back into one file.
+Use `python3 -m audiochop` when you want to split files from a terminal or batch script.
+Use `python3 -m audiochop.merge_cli` when you want to combine split segments back into one file.
 
 ## Requirements
 
@@ -11,18 +11,18 @@ Use `audio_merge_cli.py` when you want to combine split segments back into one f
 ## Basic Usage
 
 ```bash
-python3 audio_splitter_cli.py FILE_OR_PATTERN --duration MINUTES
+python3 -m audiochop FILE_OR_PATTERN --duration MINUTES
 ```
 
 Examples:
 
 ```bash
-python3 audio_splitter_cli.py song.mp3 --duration 5
-python3 audio_splitter_cli.py "*.mp3" --duration 10
-python3 audio_splitter_cli.py "/home/me/Music/*.flac" --duration 15
-python3 audio_splitter_cli.py song.mp3 --duration 5 --output split_output
-python3 audio_splitter_cli.py "*.m4a" --duration 20 --threads 4
-python3 audio_splitter_cli.py "*.wav" --duration 3 --quiet
+python3 -m audiochop song.mp3 --duration 5
+python3 -m audiochop "*.mp3" --duration 10
+python3 -m audiochop "/home/me/Music/*.flac" --duration 15
+python3 -m audiochop song.mp3 --duration 5 --output split_output
+python3 -m audiochop "*.m4a" --duration 20 --threads 4
+python3 -m audiochop "*.wav" --duration 3 --quiet
 ```
 
 ## Options
@@ -58,13 +58,13 @@ Files shorter than or equal to twice the selected split duration are copied as `
 Merge files in the exact order you provide them:
 
 ```bash
-python3 audio_merge_cli.py 1.m4a 2.m4a 3.m4a -o merged_song.m4a
+python3 -m audiochop.merge_cli 1.m4a 2.m4a 3.m4a -o merged_song.m4a
 ```
 
 If `--output` is omitted, the output defaults to the first input file name with `_merged` added:
 
 ```bash
-python3 audio_merge_cli.py 01.mp3 02.mp3 03.mp3
+python3 -m audiochop.merge_cli 01.mp3 02.mp3 03.mp3
 # writes 01_merged.mp3
 ```
 
