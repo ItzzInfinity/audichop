@@ -43,5 +43,18 @@
 19. write a file audio_merge_cli.py to merge audio files from the command line, similar to the splitting functionality but in reverse, allowing users to combine multiple audio segments back into a single file.
     1.  It will combine multiple audio segments with the arguments provided by the user, such as the input files, output file name
     2.  merge_cli.py 1.m4a 2.m4a 3.m4a -o merged_song.m4a merge will be done in the order of the input files provided by the user and if no output file name is provided, it will default to the name of the first input file with a suffix "_merged" (e.g., "1_merged.m4a").
+20. Finally The ultimate task :
+    1. Make this a module / package that can be easily installed and imported into other projects. This will involve organizing the code into a structured format, creating setup files for installation, and ensuring that the module can be easily imported and used in other Python projects.
+    2. Provide clear documentation for the module, including usage examples and API references, to help other developers understand how to use the functionality provided by the audio file splitter in their own projects. This documentation can be included in the README files or as separate documentation files within the package.
+    3. For GUI `python3 -m audiochop.launch` and for CLI `python3 -m audiochop` can be used to launch the respective interfaces after the package is installed.
+    4. Usage will look like `python3 -m audiochop.launch` opens GUI whereas `python3 -m audiochop ~/Downloads/1.m4a -d 20 -t 4` 
+    5. want the shorter `python3 -m audiochop` (no .cli), so add a `__main__.py`:
+       ```python
+         # audiochop/__main__.py
+         from audiochop.cli import main
+         main()
+       ```
+21. Move all python files to audiochop/ directory.
+22. Make it compatible with Windows, macOS, and Linux operating systems by ensuring that the script uses cross-platform libraries and handles file paths and system-specific features appropriately. This may involve using libraries like `os` and `pathlib` to manage file paths in a way that is compatible with different operating systems, as well as testing the script on multiple platforms to identify and address any compatibility issues that may arise. So I can add it to PyPI and make it available for installation via pip, allowing users on different operating systems to easily install and use the audio file splitter without worrying about compatibility issues.
 # ISSUES
 1. Enabling Multithreading is causing the GUI to crash - Need to implement proper thread management and synchronization to prevent crashes when multithreading is enabled. 
