@@ -7,6 +7,7 @@ ffmpeg's concat demuxer and stream copy for low memory usage.
 """
 
 import argparse
+import os
 import subprocess
 import sys
 import tempfile
@@ -18,7 +19,7 @@ SUPPORTED_FORMATS = {".mp3", ".wav", ".m4a", ".flac"}
 
 def _escape_concat_path(path):
     """Escape a path for ffmpeg concat demuxer file lines."""
-    return str(path).replace("'", "'\\''")
+    return Path(path).as_posix().replace("'", "'\\''")
 
 
 def _default_output_path(first_input):
@@ -31,7 +32,7 @@ def _validate_inputs(files):
     """Validate input paths and supported extensions."""
     valid_files = []
     for filepath in files:
-        path = Path(filepath)
+        path = Path(os.path.expanduser(filepath))
         if not path.exists():
             raise ValueError(f"Input file not found: {filepath}")
         if not path.is_file():
@@ -44,31 +45,35 @@ def _validate_inputs(files):
 
 def merge_audio_files(input_files, output_file):
     """Merge input audio files into output_file using ffmpeg."""
-    output_path = Path(output_file)
+    output_path = Path(output_file).expanduser()
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=True) as concat_file:
-        for input_path in input_files:
-            concat_file.write(f"file '{_escape_concat_path(input_path)}'\n")
-        concat_file.flush()
+    with tempfile.TemporaryDirectory(prefix="audiochop_") as temp_dir:
+        concat_path = Path(temp_dir) / "concat.txt"
+        concat_lines = [
+            f"file '{_escape_concat_path(Path(input_path).expanduser().resolve())}'"
+            for input_path in input_files
+        ]
+        concat_path.write_text("\n".join(concat_lines) + "\n", encoding="utf-8")
 
         command = [
-                "ffmpeg",
-                "-y", 
-                "-hide_banner", 
-                "-loglevel", "error", 
-                "-f", 
-                "concat", 
-                "-safe", 
-                "0", 
-                "-i", 
-                concat_file.name,
-                "-map",
-                "0:a",          # ← audio streams only, drop mjpeg thumbnail
-                "-c", 
-                "copy",
-                str(output_path),
-                ]
+            "ffmpeg",
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            str(concat_path),
+            "-map",
+            "0:a",
+            "-c",
+            "copy",
+            str(output_path),
+        ]
         subprocess.run(command, check=True, capture_output=True, text=True)
 
     return output_path
@@ -111,7 +116,7 @@ NOTES:
 
     try:
         input_files = _validate_inputs(args.files)
-        output_file = Path(args.output) if args.output else _default_output_path(input_files[0])
+        output_file = Path(args.output).expanduser() if args.output else _default_output_path(input_files[0])
 
         print(f"Merging {len(input_files)} file(s)...")
         for index, input_path in enumerate(input_files, 1):
@@ -133,4 +138,5 @@ NOTES:
 
 
 if __name__ == "__main__":
+    sys.argv[0] = "python3 -m audiochop.merge_cli"
     main()

@@ -28,7 +28,7 @@ except ImportError as e:
     print("Try: pip install --upgrade PyQt6")
     sys.exit(1)
 
-from audio_processor import AudioProcessor
+from audiochop.processor import AudioProcessor
 from PyQt6.QtWidgets import QAbstractItemView
 
 
@@ -232,7 +232,7 @@ class AudioSplitterApp(QMainWindow):
         folder_row.addWidget(QLabel("Audio folder:"))
         self.folder_path_input = QLineEdit()
         self.folder_path_input.setPlaceholderText("Enter folder path or use Browse button")
-        self.folder_path_input.setText(os.path.expanduser("~/Downloads"))
+        self.folder_path_input.setText(str(Path.home() / "Downloads"))
         self.browse_folder_btn = QPushButton("Browse…")
         self.browse_folder_btn.clicked.connect(self._browse_folder)
         self.folder_path_input.editingFinished.connect(self._load_folder_contents)
@@ -567,9 +567,9 @@ def main():
         print("   sudo apt-get install libqt6gui6 libqt6core6", file=sys.stderr)
         print("\n2. Try with environment variable:", file=sys.stderr)
         print("   export QT_QPA_PLATFORM=offscreen", file=sys.stderr)
-        print("   python3 audio_splitter.py", file=sys.stderr)
+        print("   python3 -m audiochop.launch", file=sys.stderr)
         print("\n3. Use CLI version instead:", file=sys.stderr)
-        print("   python3 audio_splitter_cli.py --help", file=sys.stderr)
+        print("   python3 -m audiochop --help", file=sys.stderr)
         print("="*50 + "\n", file=sys.stderr)
         
         sys.exit(1)

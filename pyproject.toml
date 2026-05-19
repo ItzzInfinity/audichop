@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "audiochop"
+version = "0.1.0"
+description = "Low-memory audio splitter and merger with PyQt6 GUI and CLI interfaces."
+readme = "README.md"
+requires-python = ">=3.8"
+license = {file = "LICENSE"}
+authors = [
+  {name = "AudioChop Contributors"}
+]
+keywords = ["audio", "ffmpeg", "splitter", "merge", "pyqt6"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: End Users/Desktop",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: MacOS",
+  "Operating System :: Microsoft :: Windows",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Multimedia :: Sound/Audio",
+]
+dependencies = [
+  "PyQt6==6.7.0",
+  "PyQt6-Qt6==6.7.0",
+  "PyQt6-sip==13.8.0",
+]
+
+[project.optional-dependencies]
+gui = [
+  "PyQt6==6.7.0",
+  "PyQt6-Qt6==6.7.0",
+  "PyQt6-sip==13.8.0",
+]
+
+[project.scripts]
+audiochop = "audiochop.cli:main"
+audiochop-gui = "audiochop.launch:main"
+audiochop-merge = "audiochop.merge_cli:main"
+
+[tool.setuptools]
+
+[tool.setuptools.packages.find]
+include = ["audiochop*"]

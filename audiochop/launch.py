@@ -6,6 +6,7 @@ Handles display issues and provides fallbacks.
 
 import sys
 import os
+import tempfile
 from pathlib import Path
 
 
@@ -20,7 +21,8 @@ def has_display():
         return True
     
     # Check for X11 socket on Linux
-    if sys.platform.startswith('linux') and os.path.exists('/tmp/.X11-unix'):
+    x11_socket_dir = Path(tempfile.gettempdir()) / ".X11-unix"
+    if sys.platform.startswith('linux') and x11_socket_dir.exists():
         return True
     
     # macOS and Windows usually have displays
@@ -32,10 +34,6 @@ def has_display():
 
 def main():
     """Main entry point - route to GUI or CLI based on environment."""
-    # Change to script directory
-    script_dir = Path(__file__).parent
-    os.chdir(script_dir)
-    
     # Check command line arguments
     force_cli = '--cli' in sys.argv
     force_gui = '--gui' in sys.argv
@@ -50,11 +48,11 @@ def main():
     # Route to appropriate launcher
     if use_cli:
         # Use CLI version - import and run
-        from audio_splitter_cli import main as cli_main
+        from audiochop.cli import main as cli_main
         cli_main()
     else:
         # Use GUI version - import and run
-        from audio_splitter import main as gui_main
+        from audiochop.gui import main as gui_main
         gui_main()
 
 
@@ -72,6 +70,3 @@ if __name__ == "__main__":
         import traceback
         traceback.print_exc()
         sys.exit(1)
-
-
-

@@ -7,23 +7,25 @@ Useful for batch processing and automation.
 import argparse
 import glob
 import multiprocessing
+import os
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-from audio_processor import AudioProcessor
+from audiochop.processor import AudioProcessor
 
 
 def _expand_input_files(patterns):
     """Expand literal paths and wildcard patterns into a stable file list."""
     input_files = []
     for pattern in patterns:
-        matches = [Path(match) for match in glob.glob(pattern)]
+        expanded_pattern = os.path.expanduser(pattern)
+        matches = [Path(match) for match in glob.glob(expanded_pattern)]
         if matches:
             input_files.extend(str(match) for match in matches if match.is_file())
             continue
 
-        path_obj = Path(pattern)
+        path_obj = Path(expanded_pattern)
         if path_obj.exists() and path_obj.is_file():
             input_files.append(str(path_obj))
         elif any(char in pattern for char in "*?[]"):

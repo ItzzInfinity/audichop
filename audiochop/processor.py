@@ -66,6 +66,7 @@ class AudioProcessor:
 
     def get_duration_seconds(self, input_filepath: str) -> float:
         """Return audio duration in seconds using ffprobe."""
+        input_path = Path(input_filepath).expanduser()
         command = [
             "ffprobe",
             "-v",
@@ -74,7 +75,7 @@ class AudioProcessor:
             "format=duration",
             "-of",
             "default=noprint_wrappers=1:nokey=1",
-            input_filepath,
+            str(input_path),
         ]
         result = subprocess.run(
             command,
@@ -138,7 +139,7 @@ class AudioProcessor:
         Returns:
             True if successful, False otherwise.
         """
-        input_path = Path(input_filepath)
+        input_path = Path(input_filepath).expanduser()
 
         try:
             if not input_path.exists():
@@ -153,7 +154,7 @@ class AudioProcessor:
                 self.log_progress("Error: Split duration must be at least 1 minute")
                 return False
 
-            output_path = Path(output_folder) if output_folder else input_path.parent / input_path.stem
+            output_path = Path(output_folder).expanduser() if output_folder else input_path.parent / input_path.stem
             output_path.mkdir(parents=True, exist_ok=True)
 
             self.log_progress(f"Inspecting audio file: {input_filepath}")
