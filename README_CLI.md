@@ -14,6 +14,8 @@ Use `python3 -m audiochop.merge_cli` when you want to combine split segments bac
 python3 -m audiochop FILE_OR_PATTERN --duration MINUTES
 ```
 
+![AudioChop split CLI help](docs/cli_split_help.png)
+
 Examples:
 
 ```bash
@@ -60,6 +62,8 @@ Merge files in the exact order you provide them:
 ```bash
 python3 -m audiochop.merge_cli 1.m4a 2.m4a 3.m4a -o merged_song.m4a
 ```
+
+![AudioChop merge CLI help](docs/cli_merge_help.png)
 
 If `--output` is omitted, the output defaults to the first input file name with `_merged` added:
 

@@ -67,6 +67,8 @@ The log panel sits on the left. Drag the vertical divider to resize it. Drag the
 
 A command-line interface for scripting, wildcards, and automated pipelines. Also includes a merge tool to combine segments back into one file.
 
+![AudioChop split CLI help](docs/cli_split_help.png)
+
 ```bash
 # Split a single file
 python3 -m audiochop song.mp3 --duration 20
@@ -77,6 +79,8 @@ python3 -m audiochop "*.m4a" --duration 20 --threads 4
 # Merge segments back together
 python3 -m audiochop.merge_cli 01.m4a 02.m4a 03.m4a -o merged.m4a
 ```
+
+![AudioChop merge CLI help](docs/cli_merge_help.png)
 
 → Full CLI guide: [README_CLI.md](README_CLI.md)
 
