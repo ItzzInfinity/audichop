@@ -13,9 +13,9 @@
 9. The script will use a reliable audio processing library, such as pydub or ffmpeg, to handle the splitting of audio files accurately and efficiently. The library will be chosen based on its compatibility with the supported audio formats and its ability to handle large audio files without significant performance issues.
 10. The script will include error handling to manage potential issues such as unsupported file formats, read/write permissions, and other exceptions that may arise during the splitting process. The user will be informed of any errors through the GUI, and the script will attempt to continue processing other files if an error occurs with a specific file.
 11. Script path "/home/itzzinfinity/Downloads/my_music/automation/split/"
-12. Read `ssd_2_system.py` for QT GUI reference and implement the following features:
+12. Read `example.py` for QT GUI reference and implement the following features:
     1. create a textbox to show the selected audio file path which is editable and can be used to input the path directly and to the right of it a button to open the file dialog to select **folder** called *Browse*
-    2. A Container area which will show the list of present audio files in the selected folder with a selection feature to select one or more files to split which can be implemented from `ssd_2_system.py`.
+    2. A Container area which will show the list of present audio files in the selected folder with a selection feature to select one or more files to split which can be implemented from `example.py`.
 13. Implement Lower Memory Usage:
      1. Instead of loading the entire audio file into memory, the script will read and process the audio file in smaller chunks. This can be achieved by using a streaming approach or by utilizing libraries that support chunked processing of audio files.
      2. The script will also ensure that any temporary files created during the splitting process are properly managed and deleted after use to free up disk space.
